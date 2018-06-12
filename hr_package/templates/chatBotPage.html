@@ -1,0 +1,149 @@
+<html lang="en"><head>
+    <meta charset="UTF-8">
+    <title>UI Design - CHATBOT App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='font-awesome.min.css') }}">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+
+</head>
+<body>
+<div class="container">
+    <div class="app">
+        <div class="head clearfix">
+
+            <span class="title">CHATBOT</span>
+
+        </div>
+
+
+
+        <div class="body">
+            <div class="chat-messages" style="height: 545px;">
+                <div class="chat">
+                    <div class="chat-content clearfix" >
+                        <div class="scrollable" id="chatbox">
+                            <span class='bot first'>Hi ! I am a testbot</span>
+                            <span class='bot first'>How can I help You?</span>
+                            <div id="chatboxDD" style="padding-bottom: 5px;"></div>
+                            <div id="loaderDiv"><span class="bot last" id="loader" style="width: 58px;height: 1px;border-radius: 60px 60px 60px 60px;display:none"><img src="../static/img/30.gif"></div>
+                            <section id="choices" style="display: none">
+                                <div class="horizontal">
+                                    <div class="table" id="articles">
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+                    </div>
+
+                    <div class="msg-box" id="userInput">
+                        <input id="textInput" type="text" name="msg" placeholder="Message" class="ip-msg">
+                        <span class="btn-group" id="buttonInput" type="submit">
+                  <i class="fa fa-paper-plane"></i>
+                </span>
+                    </div>
+
+                    <script>
+                        function getBotResponse() {
+                            var delay = 1000;
+                            var rawText = $("#textInput").val();
+                            $("#articles").children().remove();
+                            $("#choices").hide();
+                            var userHtml = '<span class="you first" style="margin-bottom: 10px;">' + rawText + '</span>';
+                            $("#textInput").val("");
+                            $("#chatboxDD").append(userHtml);
+                            $("#loader").show();
+                            $("#chatbox").stop().animate({ scrollTop: $("#chatbox")[0].scrollHeight}, 1000);
+                            $.ajax({
+                                type: 'POST',
+                                url: 'http://127.0.0.1:5002/initiate_chat',
+                                data: JSON.stringify({"message":rawText}),
+                                success: function(data) {
+                                    var botHtml = '<span class="bot first" style="margin-bottom: 10px;">' + data.response.scenario + '</span>';
+                                    setTimeout(function() {
+                                        $("#chatboxDD").append(botHtml);
+                                        $("#chatbox").stop().animate({ scrollTop: $("#chatbox")[0].scrollHeight}, 1000);
+                                        $("#loader").hide();
+                                    }, delay);
+                                    if(data.response.ChoiceValues.length > 0) {
+                                        var botItemsHtml = '';
+                                        $.each(data.response.ChoiceValues, function (k, v) {
+                                            botItemsHtml = botItemsHtml + '<article onclick=getBotScenarioResponse("' + v.nextStep + '","' + data.fileName + '")><a id="article' + v.nextStep + '" href="#">' + v.choiceValue + '</a></article>';
+                                        });
+                                        botItemsHtml = botItemsHtml + ''
+                                        setTimeout(function () {
+                                            $("#articles").append(botItemsHtml);
+                                            $("#choices").show();
+                                            $("#chatbox").stop().animate({scrollTop: $("#chatbox")[0].scrollHeight}, 1000);
+                                            $("#loader").hide();
+                                        }, delay);
+                                    }
+                                },
+                                contentType: "application/json",
+                                dataType: 'json'
+                            });
+                        }
+
+                        function getBotScenarioResponse(nextStep,fileName) {
+                            var delay = 1000;
+                            var userHtml = '<span class="you first" style="margin-bottom: 10px;">' + $("#article"+nextStep).text() + '</span>';
+                            $("#articles").children().remove();
+                            $("#choices").hide();
+                            $("#chatboxDD").append(userHtml);
+                            $("#loader").show();
+                            $("#chatbox").stop().animate({ scrollTop: $("#chatbox")[0].scrollHeight}, 1000);
+                            $.ajax({
+                                type: 'POST',
+                                url: 'http://127.0.0.1:5002/scenario_response',
+                                data: JSON.stringify({"fileName":fileName,"scenarioId":nextStep}),
+                                success: function(data) {
+                                    if(data.response.scenario !='') {
+                                        var botHtml = '<span class="bot first" style="margin-bottom: 10px;">' + data.response.scenario + '</span>';
+                                        setTimeout(function () {
+                                            $("#chatboxDD").append(botHtml);
+                                            $("#chatbox").stop().animate({scrollTop: $("#chatbox")[0].scrollHeight}, 1000);
+                                            $("#loader").hide();
+                                        }, delay);
+                                    }
+                                    if(data.response.ChoiceValues.length > 0){
+                                        var botItemsHtml = '';
+                                        $.each(data.response.ChoiceValues, function(k, v) {
+                                            botItemsHtml=botItemsHtml+'<article onclick=getBotScenarioResponse("'+v.nextStep+'","'+ data.fileName +'")><a id="article'+v.nextStep+'" href="#" >'+v.choiceValue+'</a></article>';
+                                        });
+                                        botItemsHtml=botItemsHtml+ ''
+                                        setTimeout(function() {
+                                            $("#articles").append(botItemsHtml);
+                                            $("#choices").show();
+                                            $("#chatbox").stop().animate({ scrollTop: $("#chatbox")[0].scrollHeight}, 1000);
+                                            $("#loader").hide();
+                                        }, delay);
+                                    }
+                                },
+                                contentType: "application/json",
+                                dataType: 'json'
+                            });
+                        }
+
+                        $("#textInput").keypress(function(e) {
+                            if(e.which == 13) {
+                                getBotResponse();
+                            }
+                        });
+                        $("#buttonInput").click(function() {
+                            getBotResponse();
+                        })
+                    </script>
+
+                </div>
+            </div>
+
+        </div>
+
+        <div class="footer">
+
+        </div>
+
+    </div>
+</div>
+
+</body></html>
